@@ -9,7 +9,12 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region                      = var.aws_region
+  skip_credentials_validation = var.offline_mode
+  skip_requesting_account_id  = var.offline_mode
+  skip_metadata_api_check     = var.offline_mode
+  access_key                  = var.offline_mode ? "mock-access-key" : null
+  secret_key                  = var.offline_mode ? "mock-secret-key" : null
 }
 
 # Security Group for EC2 Web Server

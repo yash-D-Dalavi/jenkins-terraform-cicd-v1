@@ -1,10 +1,15 @@
 pipeline {
     agent any
-
-    environment {
-        AWS_REGION = 'us-east-1'
+    options {
+        timestamps()
     }
-
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+    environment {
+        AWS_REGION          = 'us-east-1'
+        TF_VAR_offline_mode = 'true'
+    }
     stages {
         stage('Checkout Source Code') {
             steps {
@@ -12,7 +17,6 @@ pipeline {
                 checkout scm
             }
         }
-
         stage('Install Dependencies & Unit Test') {
             steps {
                 echo 'Running automated unit tests with pytest...'
@@ -24,38 +28,38 @@ pipeline {
                     pytest test_app.py --junitxml=test-reports/results.xml
                 '''
             }
+            post {
+                always {
+                    junit 'test-reports/results.xml'
+                }
+            }
         }
-
         stage('Terraform Init & Validate') {
             steps {
                 echo 'Initializing and validating Terraform configuration...'
                 sh '''
-                    terraform init
+                    terraform init -input=false
                     terraform validate
                 '''
             }
         }
-
         stage('Terraform Plan') {
             steps {
                 echo 'Generating Terraform execution plan...'
                 sh '''
-                    terraform plan -out=tfplan
+                    terraform plan -input=false -out=tfplan
+                    terraform show -no-color tfplan > tfplan.txt
                 '''
+                archiveArtifacts artifacts: 'tfplan.txt'
             }
         }
-
-        stage('Terraform Provisioning (Conditional)') {
+        stage('Provisioning Readiness Check') {
             steps {
-                echo 'Dry-run successful. Infrastructure readiness validated.'
+                echo 'Plan validated. terraform apply skipped: AWS credentials unavailable in CI environment.'
             }
         }
     }
-
     post {
-        always {
-            echo 'Pipeline execution completed.'
-        }
         success {
             echo 'CI/CD Pipeline and Terraform Validation Succeeded!'
         }

@@ -15,3 +15,9 @@ variable "ami_id" {
   type        = string
   default     = "ami-0c7217cdde317cfec" # Standard Ubuntu 22.04 LTS AMI
 }
+
+variable "offline_mode" {
+  description = "Skip AWS credential validation for CI/CD plan verification without live AWS credentials"
+  type        = bool
+  default     = false
+}
